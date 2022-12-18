@@ -1,0 +1,2 @@
+ python3 -m http.server 80    # run python3 http server
+ python3 portScanner.py 192.168.1.46  # Run first port scanner

